@@ -48,10 +48,6 @@ export class RabbitService {
 		}
 	}
 
-	/**
-	 * Obtiene o inicializa la conexión y el canal AMQP.
-	 * Utiliza un mutex basado en promesas para evitar conexiones concurrentes duplicadas.
-	 */
 	public async getChannel(): Promise<Channel> {
 		if (this.canal) {
 			return this.canal;
@@ -184,59 +180,28 @@ export class RabbitService {
 							return;
 						}
 
-						// 1. Identificar correlationId directo
-						let correlationId =
+						const correlationId =
 							msg.properties.correlationId ||
-							dataParsed?.resultado?.correlationId ||
-							dataParsed?.datos?.correlationId ||
-							dataParsed?.correlationId;
+							(this.solicitudesPendientes.size === 1
+								? this.solicitudesPendientes.keys().next().value
+								: undefined);
 
-						// 2. Si no viene correlationId, intentar correlacionar por documento según el contrato
-						let idPendienteEncontrado: string | null = null;
-
-						if (correlationId && this.solicitudesPendientes.has(correlationId)) {
-							idPendienteEncontrado = correlationId;
-						} else {
-							// Extraer posibles documentos de dataDetail o identificationDocuments
-							const docsEnRespuesta: string[] = [];
-							const dataDetail = Array.isArray(dataParsed?.dataDetail)
-								? dataParsed.dataDetail
-								: [];
-
-							for (const item of dataDetail) {
-								const idDocs = Array.isArray(item?.identificationDocuments)
-									? item.identificationDocuments
-									: [];
-								for (const doc of idDocs) {
-									if (doc?.documentNumber) {
-										if (doc.letter) docsEnRespuesta.push(`${doc.letter}-${doc.documentNumber}`);
-										docsEnRespuesta.push(String(doc.documentNumber));
-									}
-								}
-							}
-
-							// Si sólo hay una solicitud en vuelo para esta cola, despacharla
-							if (!idPendienteEncontrado && this.solicitudesPendientes.size === 1) {
-								idPendienteEncontrado = this.solicitudesPendientes.keys().next().value || null;
-							}
-						}
-
-						if (!idPendienteEncontrado) {
+						if (!correlationId || !this.solicitudesPendientes.has(correlationId)) {
 							logger.warn(
 								'RabbitMQ',
-								`Mensaje en cola "${colaRespuesta}" sin correlationId ni documento coincidente. Descartando mensaje.`
+								`Mensaje en cola "${colaRespuesta}" sin correlationId coincidente. Descartando mensaje.`
 							);
 							canal.ack(msg);
 							return;
 						}
 
-						const pendiente = this.solicitudesPendientes.get(idPendienteEncontrado)!;
+						const pendiente = this.solicitudesPendientes.get(correlationId)!;
 						clearTimeout(pendiente.timer);
-						this.solicitudesPendientes.delete(idPendienteEncontrado);
+						this.solicitudesPendientes.delete(correlationId);
 						pendiente.resolve(dataParsed);
 						logger.debug(
 							'RabbitMQ',
-							`Respuesta despachada para solicitud: ${idPendienteEncontrado}`
+							`Respuesta despachada localmente para CorrelationId: ${correlationId}`
 						);
 
 						canal.ack(msg);
@@ -311,18 +276,6 @@ export class RabbitService {
 			this.ultimoLogSinWorkers.delete(queueIn);
 		}
 
-		const docFinal =
-			document ||
-			(typeof payload === 'object' && payload !== null
-				? payload.letter && payload.documentNumber
-					? `${payload.letter}-${payload.documentNumber}`
-					: payload.documentNumber
-						? String(payload.documentNumber)
-						: payload.otherDocument?.value?.documentNumber
-							? String(payload.otherDocument.value.documentNumber)
-							: undefined
-				: undefined);
-
 		return new Promise<T>((resolve, reject) => {
 			let finalizado = false;
 
@@ -354,16 +307,15 @@ export class RabbitService {
 					this.solicitudesPendientes.delete(correlationId);
 					reject(err);
 				},
-				timer
+				timer,
 			});
 
-			const payloadLog =
-				typeof payload === 'object' && payload !== null
-					? {
-						...payload,
-						apiKey: (payload as Record<string, any>).apiKey ? '***SENSIBLE***' : undefined,
-					}
-					: payload;
+			const payloadLog = typeof payload === 'object' && payload !== null
+				? {
+					...payload,
+					apiKey: (payload as Record<string, any>).apiKey ? payload.apiKey.slice(0, 4) + '-***SENSIBLE***-' + payload.apiKey.slice(-5) : 'Sin apikey',
+				}
+				: payload;
 			logger.debug('RabbitMQ', `Payload enviado a "${queueIn}": ${JSON.stringify(payloadLog)}`);
 
 			// Encolar mensaje

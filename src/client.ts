@@ -3,63 +3,39 @@ import { RabbitService } from './services/rabbit/rabbit.service.js';
 import { ENV } from './config/env.config.js';
 
 export interface QueueClientOptions {
-	/** Opciones de conexión a RabbitMQ (por defecto usa las variables de entorno RABBIT_*) */
 	rabbit?: Options.Connect;
-	/** API Key global por defecto para incluir en el payload si no se especifica */
 	defaultApiKey?: string;
-	/** Tiempo de espera por defecto en milisegundos (default: 30000) */
 	defaultTimeoutMs?: number;
-	/** Colas por defecto si se omiten en consultarEnCola */
-	queues?: {
-		in?: string;
-		out?: string;
+	queues: {
+		in: string;
+		out: string;
 	};
 }
 
 export interface ConsultarEnColaParams<TPayload = Record<string, any>> {
-	/** Cola de entrada en RabbitMQ donde se enviará el mensaje */
 	queueIn?: string;
-	/** Cola de respuesta en RabbitMQ donde se escuchará la respuesta */
 	queueOut?: string;
-	/** Payload o cuerpo del mensaje a enviar */
 	payload: TPayload;
-	/** Correlation ID opcional (se genera automáticamente un UUID si se omite) */
 	correlationId?: string;
-	/** Timeout máximo de espera en milisegundos (default: 30000) */
 	timeoutMs?: number;
 }
 
-/**
- * Cliente RPC genérico para consultar cualquier tipo de colas en RabbitMQ.
- */
 export class RabbitQueueClient {
 	public readonly rabbitService: RabbitService;
 	private readonly defaultApiKey: string;
 	private readonly defaultQueues: { in: string; out: string };
 	private readonly defaultTimeoutMs: number;
 
-	constructor(options: QueueClientOptions = {}) {
+	constructor(options: QueueClientOptions) {
 		this.defaultApiKey = options.defaultApiKey || ENV.RABBIT_API_KEY;
 		this.defaultQueues = {
-			in: options.queues?.in || ENV.DEFAULT_QUEUE_IN,
-			out: options.queues?.out || ENV.DEFAULT_QUEUE_OUT,
+			in: options.queues.in,
+			out: options.queues.out,
 		};
 		this.defaultTimeoutMs = options.defaultTimeoutMs || 30000;
 		this.rabbitService = new RabbitService(options.rabbit);
 	}
 
-	/**
-	 * Envía un mensaje RPC a cualquier cola de RabbitMQ y espera la respuesta correlacionada.
-	 *
-	 * Ejemplo de uso:
-	 * ```typescript
-	 * const data = await client.consultarEnCola({
-	 *   queueIn: 'OtraColaIn',
-	 *   queueOut: 'OtraColaOut',
-	 *   payload: { foo: 'bar' },
-	 * });
-	 * ```
-	 */
 	public async consultarEnCola<TResponse = any, TPayload = Record<string, any>>(
 		params: ConsultarEnColaParams<TPayload>
 	): Promise<TResponse> {
@@ -90,16 +66,10 @@ export class RabbitQueueClient {
 		});
 	}
 
-	/**
-	 * Retorna las colas por defecto configuradas en el cliente.
-	 */
 	public getDefaultQueues(): { in: string; out: string } {
 		return { ...this.defaultQueues };
 	}
 
-	/**
-	 * Cierra ordenadamente el canal y la conexión con RabbitMQ.
-	 */
 	public async close(): Promise<void> {
 		await this.rabbitService.close();
 	}
