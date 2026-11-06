@@ -4,17 +4,12 @@ import { ENV } from './config/env.config.js';
 
 export interface QueueClientOptions {
 	rabbit?: Options.Connect;
-	defaultApiKey?: string;
 	defaultTimeoutMs?: number;
-	queues: {
-		in: string;
-		out: string;
-	};
 }
 
 export interface ConsultarEnColaParams<TPayload = Record<string, any>> {
-	queueIn?: string;
-	queueOut?: string;
+	queueIn: string;
+	queueOut: string;
 	payload: TPayload;
 	correlationId?: string;
 	timeoutMs?: number;
@@ -23,15 +18,10 @@ export interface ConsultarEnColaParams<TPayload = Record<string, any>> {
 export class RabbitQueueClient {
 	public readonly rabbitService: RabbitService;
 	private readonly defaultApiKey: string;
-	private readonly defaultQueues: { in: string; out: string };
 	private readonly defaultTimeoutMs: number;
 
-	constructor(options: QueueClientOptions) {
-		this.defaultApiKey = options.defaultApiKey || ENV.RABBIT_API_KEY;
-		this.defaultQueues = {
-			in: options.queues.in,
-			out: options.queues.out,
-		};
+	constructor(options: QueueClientOptions = {}) {
+		this.defaultApiKey = ENV.RABBIT_API_KEY;
 		this.defaultTimeoutMs = options.defaultTimeoutMs || 30000;
 		this.rabbitService = new RabbitService(options.rabbit);
 	}
@@ -39,18 +29,15 @@ export class RabbitQueueClient {
 	public async consultarEnCola<TResponse = any, TPayload = Record<string, any>>(
 		params: ConsultarEnColaParams<TPayload>
 	): Promise<TResponse> {
-		const queueIn = params.queueIn || this.defaultQueues.in;
-		const queueOut = params.queueOut || this.defaultQueues.out;
+		const { queueIn, queueOut } = params;
 
 		if (!queueIn || !queueOut) {
-			throw new Error(
-				'Debes especificar "queueIn" y "queueOut" en la llamada, o "queues.in" y "queues.out" en el constructor.'
-			);
+			throw new Error('Debes especificar obligatoriamente "queueIn" y "queueOut".');
 		}
 
 		// Asegurar apiKey en el payload si está disponible
 		const rawPayload = params.payload as Record<string, any>;
-		const apiKey = rawPayload?.apiKey || this.defaultApiKey || ENV.RABBIT_API_KEY;
+		const apiKey = rawPayload?.apiKey || ENV.RABBIT_API_KEY;
 
 		const payloadFinal =
 			typeof rawPayload === 'object' && rawPayload !== null && apiKey
@@ -64,10 +51,6 @@ export class RabbitQueueClient {
 			correlationId: params.correlationId,
 			timeoutMs: params.timeoutMs || this.defaultTimeoutMs,
 		});
-	}
-
-	public getDefaultQueues(): { in: string; out: string } {
-		return { ...this.defaultQueues };
 	}
 
 	public async close(): Promise<void> {

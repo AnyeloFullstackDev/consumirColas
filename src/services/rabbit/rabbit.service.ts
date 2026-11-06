@@ -255,6 +255,15 @@ export class RabbitService {
 				);
 			}
 
+			console.log("enviado a la cola", queueIn, mensajeBuffer, {
+				contentType: 'application/json',
+				deliveryMode: 2,
+				persistent: true,
+				correlationId,
+				replyTo: queueOut,
+				timestamp: Date.now(),
+			})
+
 			canal.sendToQueue(queueIn, mensajeBuffer, {
 				contentType: 'application/json',
 				deliveryMode: 2,

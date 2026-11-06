@@ -15,8 +15,7 @@ Totalmente agnóstico, sin dependencias de servidores HTTP y listo para integrar
 
 - 🎯 **Método único y universal:** Toda consulta se realiza mediante `client.consultarEnCola(...)`.
 - 🎛️ **Cualquier tipo de cola y payload:** Permite enviar a cualquier par de colas (`queueIn` y `queueOut`) con **cualquier estructura de payload** que requiera tu worker.
-- ⚙️ **Colas por defecto en el constructor:** Defines `queues.in` y `queues.out` al crear el cliente; si no especificas colas en la llamada, se usan esas.
-- 🔐 **Inyección de API Key:** Si configuras `RABBIT_API_KEY` en el entorno o en el constructor, se inyecta automáticamente en el payload del mensaje si este no la contiene.
+- 🔐 **Inyección de API Key:** Si configuras `RABBIT_API_KEY` en el entorno, se inyecta automáticamente en el payload del mensaje si este no la contiene.
 - 🚀 **Cero dependencias pesadas:** Solo utiliza `amqplib` con sockets TCP nativos de Node.js.
 - 📘 **Tipado estricto en TypeScript:** Definiciones `.d.ts` y autocompletado nativo.
 
@@ -61,12 +60,7 @@ RABBIT_API_KEY=mi-clave-secreta
 ```typescript
 import { RabbitQueueClient } from 'rabbit-queue-client';
 
-const client = new RabbitQueueClient({
-  queues: {
-    in: 'ColaPrincipalIn',
-    out: 'ColaPrincipalOut',
-  },
-});
+const client = new RabbitQueueClient();
 
 // Enviar solicitud a cualquier cola y esperar la respuesta RPC
 const respuesta = await client.consultarEnCola({
@@ -82,19 +76,7 @@ const respuesta = await client.consultarEnCola({
 console.log('Resultado del worker:', respuesta);
 ```
 
-### 2. Usando las colas configuradas por defecto
-
-Si omites `queueIn` y `queueOut`, se usan las colas definidas en `queues` al crear el cliente:
-
-```typescript
-const respuesta = await client.consultarEnCola({
-  payload: {
-    documento: '12345678',
-  },
-});
-```
-
-### 3. Opciones adicionales (Timeout y Correlation ID)
+### 2. Opciones adicionales (Timeout y Correlation ID)
 
 ```typescript
 const respuesta = await client.consultarEnCola({
@@ -106,9 +88,9 @@ const respuesta = await client.consultarEnCola({
 });
 ```
 
-### 4. Inicialización con credenciales en código
+### 3. Inicialización con credenciales en código
 
-Si prefieres no usar `.env`, puedes pasar toda la configuración al instanciar el cliente:
+Si prefieres no usar `.env`, puedes pasar la configuración de conexión al instanciar el cliente:
 
 ```typescript
 import { RabbitQueueClient } from 'rabbit-queue-client';
@@ -121,16 +103,11 @@ const client = new RabbitQueueClient({
     password: 'mypassword',
     vhost: '/',
   },
-  defaultApiKey: 'clave-global-opcional',
   defaultTimeoutMs: 20000,
-  queues: {
-    in: 'ColaPrincipalIn',
-    out: 'ColaPrincipalOut',
-  },
 });
 ```
 
-### 5. Cierre de conexiones
+### 4. Cierre de conexiones
 
 ```typescript
 // Al apagar tu servidor o proceso
