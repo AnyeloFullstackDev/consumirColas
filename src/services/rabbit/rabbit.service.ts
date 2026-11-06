@@ -14,18 +14,12 @@ export interface EnviarRpcParams {
 	payload: Record<string, any>;
 	correlationId?: string;
 	timeoutMs?: number;
-	clientSystem?: string;
-	document?: string;
 }
 
 interface SolicitudPendiente {
 	resolve: (value: unknown) => void;
 	reject: (reason: Error) => void;
 	timer: NodeJS.Timeout;
-	metadata?: {
-		document?: string;
-		clientSystem?: string;
-	};
 }
 
 export class RabbitService {
@@ -190,32 +184,60 @@ export class RabbitService {
 							return;
 						}
 
-						const correlationId =
+						// 1. Identificar correlationId directo
+						let correlationId =
 							msg.properties.correlationId ||
 							dataParsed?.resultado?.correlationId ||
 							dataParsed?.datos?.correlationId ||
 							dataParsed?.correlationId;
 
-						if (!correlationId) {
+						// 2. Si no viene correlationId, intentar correlacionar por documento según el contrato
+						let idPendienteEncontrado: string | null = null;
+
+						if (correlationId && this.solicitudesPendientes.has(correlationId)) {
+							idPendienteEncontrado = correlationId;
+						} else {
+							// Extraer posibles documentos de dataDetail o identificationDocuments
+							const docsEnRespuesta: string[] = [];
+							const dataDetail = Array.isArray(dataParsed?.dataDetail)
+								? dataParsed.dataDetail
+								: [];
+
+							for (const item of dataDetail) {
+								const idDocs = Array.isArray(item?.identificationDocuments)
+									? item.identificationDocuments
+									: [];
+								for (const doc of idDocs) {
+									if (doc?.documentNumber) {
+										if (doc.letter) docsEnRespuesta.push(`${doc.letter}-${doc.documentNumber}`);
+										docsEnRespuesta.push(String(doc.documentNumber));
+									}
+								}
+							}
+
+							// Si sólo hay una solicitud en vuelo para esta cola, despacharla
+							if (!idPendienteEncontrado && this.solicitudesPendientes.size === 1) {
+								idPendienteEncontrado = this.solicitudesPendientes.keys().next().value || null;
+							}
+						}
+
+						if (!idPendienteEncontrado) {
 							logger.warn(
 								'RabbitMQ',
-								`Mensaje en cola "${colaRespuesta}" sin correlationId identificable. Descartando mensaje.`
+								`Mensaje en cola "${colaRespuesta}" sin correlationId ni documento coincidente. Descartando mensaje.`
 							);
 							canal.ack(msg);
 							return;
 						}
 
-						// 1. Obtener metadatos de la solicitud para indexar adecuadamente en Redis
-						if (correlationId && this.solicitudesPendientes.has(correlationId)) {
-							const pendiente = this.solicitudesPendientes.get(correlationId)!;
-							clearTimeout(pendiente.timer);
-							this.solicitudesPendientes.delete(correlationId);
-							pendiente.resolve(dataParsed);
-							logger.debug(
-								'RabbitMQ',
-								`Respuesta despachada localmente para CorrelationId: ${correlationId}`
-							);
-						}
+						const pendiente = this.solicitudesPendientes.get(idPendienteEncontrado)!;
+						clearTimeout(pendiente.timer);
+						this.solicitudesPendientes.delete(idPendienteEncontrado);
+						pendiente.resolve(dataParsed);
+						logger.debug(
+							'RabbitMQ',
+							`Respuesta despachada para solicitud: ${idPendienteEncontrado}`
+						);
 
 						canal.ack(msg);
 					} catch (err: unknown) {
@@ -243,8 +265,6 @@ export class RabbitService {
 			payload,
 			correlationId = crypto.randomUUID(),
 			timeoutMs = 30000,
-			clientSystem = 'default',
-			document,
 		} = params;
 
 		const mensajeBuffer = Buffer.isBuffer(payload) ? payload : Buffer.from(JSON.stringify(payload));
@@ -291,6 +311,18 @@ export class RabbitService {
 			this.ultimoLogSinWorkers.delete(queueIn);
 		}
 
+		const docFinal =
+			document ||
+			(typeof payload === 'object' && payload !== null
+				? payload.letter && payload.documentNumber
+					? `${payload.letter}-${payload.documentNumber}`
+					: payload.documentNumber
+						? String(payload.documentNumber)
+						: payload.otherDocument?.value?.documentNumber
+							? String(payload.otherDocument.value.documentNumber)
+							: undefined
+				: undefined);
+
 		return new Promise<T>((resolve, reject) => {
 			let finalizado = false;
 
@@ -322,19 +354,15 @@ export class RabbitService {
 					this.solicitudesPendientes.delete(correlationId);
 					reject(err);
 				},
-				timer,
-				metadata: {
-					document,
-					clientSystem,
-				},
+				timer
 			});
 
 			const payloadLog =
 				typeof payload === 'object' && payload !== null
 					? {
-							...payload,
-							apiKey: (payload as Record<string, any>).apiKey ? '***SENSIBLE***' : undefined,
-						}
+						...payload,
+						apiKey: (payload as Record<string, any>).apiKey ? '***SENSIBLE***' : undefined,
+					}
 					: payload;
 			logger.debug('RabbitMQ', `Payload enviado a "${queueIn}": ${JSON.stringify(payloadLog)}`);
 
