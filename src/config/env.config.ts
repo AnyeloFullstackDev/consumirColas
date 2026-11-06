@@ -17,7 +17,19 @@ export const ENV: EnvConfig = {
 	RABBIT_USER: process.env.RABBIT_USER || 'guest',
 	RABBIT_PASSWORD: process.env.RABBIT_PASSWORD || 'guest',
 	RABBIT_VHOST: process.env.RABBIT_VHOST || '/',
-	RABBIT_API_KEY: process.env.RABBIT_API_KEY || '',
-	DEFAULT_QUEUE_IN: process.env.DEFAULT_QUEUE_IN || process.env.QUEUE_IN || 'default_queue_in',
-	DEFAULT_QUEUE_OUT: process.env.DEFAULT_QUEUE_OUT || process.env.QUEUE_OUT || 'default_queue_out',
+	RABBIT_API_KEY:
+		process.env.RABBIT_API_KEY ||
+		process.env.DEFAULT_API_KEY ||
+		process.env.API_KEY ||
+		'',
+	DEFAULT_QUEUE_IN:
+		process.env.DEFAULT_QUEUE_IN ||
+		process.env.QUEUE_IN ||
+		process.env.COLA_IN_GETPERSON_DATA ||
+		'ConsumerCitizensPersonData',
+	DEFAULT_QUEUE_OUT:
+		process.env.DEFAULT_QUEUE_OUT ||
+		process.env.QUEUE_OUT ||
+		process.env.COLA_OUT_GETPERSON_DATA ||
+		'CitizensPersonData',
 };
