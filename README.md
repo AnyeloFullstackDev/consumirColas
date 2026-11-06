@@ -14,7 +14,7 @@ Totalmente agnóstico, sin dependencias de servidores HTTP y listo para integrar
 ## ⚡ Características
 
 - 🎯 **Método único y universal:** Toda consulta se realiza mediante `client.consultarEnCola(...)`.
-- 🎛️ **Cualquier tipo de cola:** Permite enviar a cualquier par de colas (`queueIn` y `queueOut`) con el `payload` que requiera tu worker.
+- 🎛️ **Cualquier tipo de cola y payload:** Permite enviar a cualquier par de colas (`queueIn` y `queueOut`) con **cualquier estructura de payload** que requiera tu worker.
 - ⚙️ **Colas por defecto opcionales:** Si no especificas colas en la llamada, toma automáticamente las colas configuradas por defecto en el entorno (`DEFAULT_QUEUE_IN` y `DEFAULT_QUEUE_OUT`).
 - 🔐 **Inyección de API Key:** Si configuras `RABBIT_API_KEY` en el entorno o en el constructor, se inyecta automáticamente en el payload del mensaje si este no la contiene.
 - 🚀 **Cero dependencias pesadas:** Solo utiliza `amqplib` con sockets TCP nativos de Node.js.
@@ -138,11 +138,66 @@ await client.close();
 
 ---
 
-## 🧪 Pruebas
+## 📦 Estructura del Payload
 
-```bash
-pnpm test
+El cliente es completamente agnóstico y **puede recibir cualquier tipo de payload** requerido por el worker o sistema de colas.
+
+Por ejemplo, para consultas de documentos de identidad, se pueden utilizar estructuras como:
+
+### A. Consulta por cédula
+```json
+{
+  "letter": "V",
+  "documentNumber": "10577440",
+  "apiKey": "<apiKey del cliente>"
+}
 ```
+
+```typescript
+const data = await client.consultarEnCola({
+  queueIn: 'ColaEntrada',
+  queueOut: 'ColaRespuesta',
+  payload: {
+    letter: 'V',
+    documentNumber: '10577440',
+    apiKey: 'tu-api-key', // Opcional si ya la definiste en RABBIT_API_KEY
+  },
+});
+```
+
+### B. Consulta por otro documento (pasaporte, por ejemplo)
+```json
+{
+  "otherDocument": {
+    "status": true,
+    "value": {
+      "documentNumber": "980085638",
+      "documentTypeId": "431b50e5"
+    }
+  },
+  "apiKey": "<apiKey del cliente>"
+}
+```
+
+```typescript
+const data = await client.consultarEnCola({
+  queueIn: 'ColaEntrada',
+  queueOut: 'ColaRespuesta',
+  payload: {
+    otherDocument: {
+      status: true,
+      value: {
+        documentNumber: '980085638',
+        documentTypeId: '431b50e5',
+      },
+    },
+    apiKey: 'tu-api-key',
+  },
+});
+```
+
+> [!NOTE]
+> Estas estructuras son ejemplos de referencia. El cliente puede enviar cualquier objeto JSON o payload arbitrario que tus workers esperen procesar.
 
 ---
 

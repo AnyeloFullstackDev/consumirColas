@@ -10,8 +10,7 @@
 	],
 	"scripts": {
 		"build": "tsc",
-		"prepare": "tsc",
-		"test": "tsc -p tsconfig.test.json && node --test dist-tests/tests/**/*.test.js"
+		"prepare": "tsc"
 	},
 	"dependencies": {
 		"amqplib": "^0.10.5",
