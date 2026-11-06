@@ -6,8 +6,10 @@ async function main() {
 	const client = new RabbitQueueClient();
 
 	try {
-		console.log('Enviando consulta a la cola...');
 		console.log('Colas por defecto:', client.getDefaultQueues());
+		console.log('API Key detectada:', Boolean(client['defaultApiKey']) ? 'SÍ (configurada)' : 'NO (vacía)');
+
+		console.log('Enviando consulta a la cola y esperando respuesta (timeout: 30s)...');
 
 		const respuesta = await client.consultarEnCola({
 			queueIn: 'ConsumerCitizensPersonData',
@@ -16,7 +18,7 @@ async function main() {
 				letter: 'V',
 				documentNumber: '10577440',
 			},
-			timeoutMs: 10000,
+			timeoutMs: 30000,
 		});
 
 		console.log('✅ Respuesta recibida con éxito:');
