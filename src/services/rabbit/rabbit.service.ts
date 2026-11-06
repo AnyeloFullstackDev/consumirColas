@@ -255,15 +255,6 @@ export class RabbitService {
 				);
 			}
 
-			console.log("enviado a la cola", queueIn, mensajeBuffer, {
-				contentType: 'application/json',
-				deliveryMode: 2,
-				persistent: true,
-				correlationId,
-				replyTo: queueOut,
-				timestamp: Date.now(),
-			})
-
 			canal.sendToQueue(queueIn, mensajeBuffer, {
 				contentType: 'application/json',
 				deliveryMode: 2,
@@ -325,7 +316,14 @@ export class RabbitService {
 					apiKey: (payload as Record<string, any>).apiKey ? payload.apiKey.slice(0, 4) + '-***SENSIBLE***-' + payload.apiKey.slice(-5) : 'Sin apikey',
 				}
 				: payload;
-			logger.debug('RabbitMQ', `Payload enviado a "${queueIn}": ${JSON.stringify(payloadLog)}`);
+
+			console.log('--- ENVIANDO MENSAJE A RABBITMQ ---');
+			console.log('Cola destino (queueIn):', queueIn);
+			console.log('Cola respuesta (queueOut):', queueOut);
+			console.log('CorrelationId:', correlationId);
+			console.log('Payload enviado:', JSON.stringify(payloadLog, null, 2));
+
+			logger.info('RabbitMQ', `Mensaje publicado en "${queueIn}" | CorrelationId: ${correlationId}`);
 
 			// Encolar mensaje
 			canal.sendToQueue(queueIn, mensajeBuffer, {
