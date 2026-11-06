@@ -23,14 +23,35 @@ Totalmente agnóstico, sin dependencias de servidores HTTP y listo para integrar
 
 ## 📥 Instalación
 
-Instálalo en tu proyecto directamente desde Git o registro npm:
+> [!NOTE]
+> La rama `main` contiene el código fuente en TypeScript. Para instalar el cliente en cualquier proyecto sin necesidad de compilar ni configurar permisos especiales en gestores de paquetes como **pnpm**, **npm** o **yarn**, instala siempre apuntando a la rama **`release`** (que contiene los archivos precompilados en `dist/`).
 
+### Con pnpm (Recomendado)
 ```bash
-# Con npm:
-npm install git+https://github.com/<tu-usuario-o-org>/rabbit-queue-client.git#main
+pnpm add github:AnyeloFullstackDev/consumirColas#release
+```
+*O con URL completa:*
+```bash
+pnpm add git+https://github.com/AnyeloFullstackDev/consumirColas.git#release
+```
 
-# Con pnpm:
-pnpm add git+https://github.com/<tu-usuario-o-org>/rabbit-queue-client.git#main
+### Con npm
+```bash
+npm install github:AnyeloFullstackDev/consumirColas#release
+```
+*O con URL completa:*
+```bash
+npm install git+https://github.com/AnyeloFullstackDev/consumirColas.git#release
+```
+
+### Con Yarn
+```bash
+yarn add github:AnyeloFullstackDev/consumirColas#release
+```
+
+### Si el repositorio es privado (Acceso por SSH)
+```bash
+pnpm add git+ssh://git@github.com/AnyeloFullstackDev/consumirColas.git#release
 ```
 
 ---
