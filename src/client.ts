@@ -44,7 +44,7 @@ export class RabbitQueueClient {
 
 		if (!queueIn || !queueOut) {
 			throw new Error(
-				'Debes especificar "queueIn" y "queueOut", o configurar las variables DEFAULT_QUEUE_IN y DEFAULT_QUEUE_OUT.'
+				'Debes especificar "queueIn" y "queueOut" en la llamada, o "queues.in" y "queues.out" en el constructor.'
 			);
 		}
 

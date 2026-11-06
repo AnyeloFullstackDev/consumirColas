@@ -3,7 +3,12 @@ import { RabbitQueueClient } from './dist/index.js';
 async function main() {
 	console.log('--- Iniciando prueba de RabbitQueueClient ---');
 
-	const client = new RabbitQueueClient();
+	const client = new RabbitQueueClient({
+		queues: {
+			in: 'ConsumerCitizensPersonData',
+			out: 'CitizensPersonData',
+		},
+	});
 
 	try {
 		console.log('Colas por defecto:', client.getDefaultQueues());

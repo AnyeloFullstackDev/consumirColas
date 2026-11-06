@@ -15,7 +15,7 @@ Totalmente agnóstico, sin dependencias de servidores HTTP y listo para integrar
 
 - 🎯 **Método único y universal:** Toda consulta se realiza mediante `client.consultarEnCola(...)`.
 - 🎛️ **Cualquier tipo de cola y payload:** Permite enviar a cualquier par de colas (`queueIn` y `queueOut`) con **cualquier estructura de payload** que requiera tu worker.
-- ⚙️ **Colas por defecto opcionales:** Si no especificas colas en la llamada, toma automáticamente las colas configuradas por defecto en el entorno (`DEFAULT_QUEUE_IN` y `DEFAULT_QUEUE_OUT`).
+- ⚙️ **Colas por defecto en el constructor:** Defines `queues.in` y `queues.out` al crear el cliente; si no especificas colas en la llamada, se usan esas.
 - 🔐 **Inyección de API Key:** Si configuras `RABBIT_API_KEY` en el entorno o en el constructor, se inyecta automáticamente en el payload del mensaje si este no la contiene.
 - 🚀 **Cero dependencias pesadas:** Solo utiliza `amqplib` con sockets TCP nativos de Node.js.
 - 📘 **Tipado estricto en TypeScript:** Definiciones `.d.ts` y autocompletado nativo.
@@ -48,10 +48,6 @@ RABBIT_USER=guest
 RABBIT_PASSWORD=guest
 RABBIT_VHOST=/
 
-# Colas por defecto (Opcional)
-DEFAULT_QUEUE_IN=mi_cola_entrada
-DEFAULT_QUEUE_OUT=mi_cola_respuesta
-
 # API Key global opcional
 RABBIT_API_KEY=mi-clave-secreta
 ```
@@ -65,7 +61,12 @@ RABBIT_API_KEY=mi-clave-secreta
 ```typescript
 import { RabbitQueueClient } from 'rabbit-queue-client';
 
-const client = new RabbitQueueClient();
+const client = new RabbitQueueClient({
+  queues: {
+    in: 'ColaPrincipalIn',
+    out: 'ColaPrincipalOut',
+  },
+});
 
 // Enviar solicitud a cualquier cola y esperar la respuesta RPC
 const respuesta = await client.consultarEnCola({
@@ -83,7 +84,7 @@ console.log('Resultado del worker:', respuesta);
 
 ### 2. Usando las colas configuradas por defecto
 
-Si definiste `DEFAULT_QUEUE_IN` y `DEFAULT_QUEUE_OUT` en tu `.env`, puedes omitir los nombres de colas:
+Si omites `queueIn` y `queueOut`, se usan las colas definidas en `queues` al crear el cliente:
 
 ```typescript
 const respuesta = await client.consultarEnCola({
