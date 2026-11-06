@@ -9,8 +9,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "tsc",
-		"prepare": "tsc"
+		"build": "tsc"
 	},
 	"dependencies": {
 		"amqplib": "^0.10.5",
