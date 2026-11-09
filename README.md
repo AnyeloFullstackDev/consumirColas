@@ -146,8 +146,8 @@ Por ejemplo, para consultas de documentos de identidad, se pueden utilizar estru
 ### A. Consulta por cédula
 ```json
 {
-  "letter": "V",
-  "documentNumber": "10577440",
+  "letter": "x",
+  "documentNumber": "xxxxxxxx",
   "apiKey": "<apiKey del cliente>"
 }
 ```
@@ -157,8 +157,8 @@ const data = await client.consultarEnCola({
   queueIn: 'ColaEntrada',
   queueOut: 'ColaRespuesta',
   payload: {
-    letter: 'V',
-    documentNumber: '10577440',
+    letter: 'x',
+    documentNumber: 'xxxxxxxx',
     apiKey: 'tu-api-key', // Opcional si ya la definiste en RABBIT_API_KEY
   },
 });
@@ -170,8 +170,8 @@ const data = await client.consultarEnCola({
   "otherDocument": {
     "status": true,
     "value": {
-      "documentNumber": "980085638",
-      "documentTypeId": "431b50e5"
+      "documentNumber": "xxxxxxxxx",
+      "documentTypeId": "xxxxxxxx"
     }
   },
   "apiKey": "<apiKey del cliente>"
@@ -186,8 +186,8 @@ const data = await client.consultarEnCola({
     otherDocument: {
       status: true,
       value: {
-        documentNumber: '980085638',
-        documentTypeId: '431b50e5',
+        documentNumber: 'xxxxxxxxx',
+        documentTypeId: 'xxxxxxxx',
       },
     },
     apiKey: 'tu-api-key',
